@@ -21,6 +21,11 @@ choice
         help
             Support for the Future Designs LPC3250 Touch screen kit
 
+	config MACH_SZYMON3250
+		bool "Custom kit"
+		help
+			Support for the custom LPC3250 kit
+
 endchoice
 
 menu "Embedded Artists Display Selection"
@@ -38,6 +43,12 @@ config EA3250_QVGA_2_8_OLED
 
 endmenu
 
+config SZYMON3250_LCD_PANEL
+	bool "Enable support for WQVGA LCD"
+	depends on MACH_SZYMON3250
+	default TRUE
+	help
+		Say Y here to enable the 480x272 LCD display
 
 config SOM9DIMM3250_LCD_PANEL
 	bool "Enables support for SOM9DIMM-LPC3250 (FDI board) LCDs"

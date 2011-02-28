@@ -18,6 +18,16 @@ config SND_LPC3XXX_SOC_I2S_UDA1380
           on the Phytec 3250 board. This requires an I2C channel connected
           to the I2C interface of the UDA1380 codec.
 
+config SND_LPC3XXX_SOC_I2S_WM8978
+		tristate "SoC Audio support for Custom LPC3250 board with WM8978"
+		depends on SND_LPC3XXX_SOC
+		select SND_SOC_WM8978
+		select SND_LPC32XX_USEI2S1
+		select SND_LPC32XX_SLAVE_TX_CLK_TO_RX
+		help
+			Say Y or M here if you want to add support for SoC audio
+			on the Custom LPC3250 board.
+
 config SND_LPC32XX_USEI2S1
         bool "Use I2S1 channel instead of I2S0"
         depends on SND_LPC3XXX_SOC
