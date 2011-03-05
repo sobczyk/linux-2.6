@@ -741,9 +741,9 @@ static struct platform_device lpc32xx_net_device = {
 /*
  * I2C devices support
  */
-#if defined (CONFIG_SENSORS_PCA9532) || defined (CONFIG_AT24)
+#if defined (CONFIG_LEDS_PCA9532) || defined (CONFIG_AT24)
 	static struct i2c_board_info __initdata ea3250_i2c_board_info [] = {
-#if defined (CONFIG_SENSORS_PCA9532)
+#if defined (CONFIG_LEDS_PCA9532)
 		{
 			I2C_BOARD_INFO("pca9532", I2C_PCA9532_ADDR),
 

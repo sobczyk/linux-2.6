@@ -49,6 +49,7 @@
 
 //same as LCD PON
 #define	BKL_POW_GPIO	LPC32XX_GPIO(LPC32XX_GPO_P3_GRP, 10)
+#define PANEL_SIZE (7 * SZ_64K)
 
 /*
  * Tick LED
@@ -179,7 +180,7 @@ static struct mmc_spi_platform_data szymon3250_mmc_spi_pdata = {
 /* SPI devices registration */
 static int __init szymon3250_spi_devices_register(void)
 {
-#if undefined(CONFIG_SPI_SPIDEV) && undefined(CONFIG_SPI_SPIDEV_MODULE)
+#if !defined(CONFIG_SPI_SPIDEV) && !defined(CONFIG_SPI_SPIDEV_MODULE)
 	static struct spi_board_info info[] = {
 		{
 			.modalias = "spidev",
@@ -210,7 +211,6 @@ arch_initcall(szymon3250_spi_devices_register);
 /*
  * Board specific LCD setup and functions
  */
-#if defined (CONFIG_SZYMON3250_LCD_PANEL)
 /*
  * Support for WQVGA portrait panel 
  */
@@ -237,8 +237,6 @@ static struct clcd_panel conn_lcd_panel = {
 				CNTL_LCDBPP24),
 	.bpp		= 24,
 };
-#define PANEL_SIZE (7 * SZ_64K)
-#endif // CONFIG_SZYMON3250_LCD_PANEL
 
 static int lpc32xx_clcd_setup(struct clcd_fb *fb)
 {
