@@ -42,6 +42,7 @@
 #include "common.h"
 
 #include <linux/spi/ads7846.h>
+#include <linux/leds-pca9532.h>
 
 #define I2C_PCA9532_ADDR 0x60
 #define I2C_24LC256_ADDR 0x50
@@ -741,12 +742,68 @@ static struct platform_device lpc32xx_net_device = {
 /*
  * I2C devices support
  */
+#if defined(CONFIG_LEDS_PCA9532)
+static struct pca9532_platform_data ea3250_leds = {
+	.leds = {
+		{	.type = PCA9532_TYPE_NONE }, /* btn1 */
+		{	.type = PCA9532_TYPE_NONE }, /* btn2 */
+		{	.type = PCA9532_TYPE_NONE }, /* btn3 */
+		{	.type = PCA9532_TYPE_NONE }, /* btn4 */
+		{	.type = PCA9532_TYPE_NONE }, /* SD CD */
+		{	.type = PCA9532_TYPE_NONE }, /* SD WP */
+		{	.type = PCA9532_TYPE_NONE },
+		{	.type = PCA9532_TYPE_NONE },
+		{
+			.name = "ea3250:led1",
+			.type = PCA9532_TYPE_LED,
+			.state = PCA9532_OFF,
+		},
+		{
+			.name = "ea3250:led2",
+			.type = PCA9532_TYPE_LED,
+			.state = PCA9532_OFF,
+		},
+		{
+			.name = "ea3250:led3",
+			.type = PCA9532_TYPE_LED,
+			.state = PCA9532_OFF,
+		},
+		{
+			.name = "ea3250:led4",
+			.type = PCA9532_TYPE_LED,
+			.state = PCA9532_OFF,
+		},
+		{
+			.name = "ea3250:led5",
+			.type = PCA9532_TYPE_LED,
+			.state = PCA9532_OFF,
+		},
+		{
+			.name = "ea3250:led6",
+			.type = PCA9532_TYPE_LED,
+			.state = PCA9532_OFF,
+		},
+		{
+			.name = "ea3250:led7",
+			.type = PCA9532_TYPE_LED,
+		},
+		{
+			.name = "ea3250:led8",
+			.type = PCA9532_TYPE_LED,
+			.state = PCA9532_OFF,
+		},
+	},
+	.psc = { 0, 0 },
+	.pwm = { 0, 0 },
+};
+#endif
+
 #if defined (CONFIG_LEDS_PCA9532) || defined (CONFIG_AT24)
 	static struct i2c_board_info __initdata ea3250_i2c_board_info [] = {
 #if defined (CONFIG_LEDS_PCA9532)
 		{
 			I2C_BOARD_INFO("pca9532", I2C_PCA9532_ADDR),
-
+			.platform_data = &ea3250_leds,
 		},
 #endif
 #if defined (CONFIG_AT24)
@@ -864,7 +921,7 @@ void __init ea3250_board_init(void)
 			LPC32XX_CLKPWR_TESTCLK_TESTCLK2_EN,
 			LPC32XX_CLKPWR_TEST_CLK_SEL);
 
-#if defined (CONFIG_SENSORS_PCA9532) || defined (CONFIG_AT24)
+#if defined (CONFIG_LEDS_PCA9532) || defined (CONFIG_AT24)
 	i2c_register_board_info(0, ea3250_i2c_board_info,
 			ARRAY_SIZE(ea3250_i2c_board_info));
 #endif
