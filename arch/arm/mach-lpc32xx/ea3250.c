@@ -31,6 +31,7 @@
 #include <linux/amba/clcd.h>
 #include <linux/amba/pl022.h>
 #include <linux/amba/mmci.h>
+#include <linux/kthread.h>
 
 #include <asm/setup.h>
 #include <asm/mach-types.h>
@@ -740,6 +741,127 @@ static struct platform_device lpc32xx_net_device = {
 };
 
 /*
+ * SD Controller
+ */
+#if defined(CONFIG_MMC_ARMMMCI)
+
+static int card_inserted = 1;
+
+#if defined (CONFIG_LEDS_PCA9532)
+static int card_detect_thread(void __iomem* d)
+{
+	int err = 0;
+	struct i2c_adapter *adap;
+	struct i2c_client *client;
+	u8 data = 0;
+
+	while (!kthread_should_stop()) {
+		adap = i2c_get_adapter(0);
+
+		if (!adap) {
+			set_current_state(TASK_INTERRUPTIBLE);
+			schedule_timeout(HZ);
+
+			continue;
+		}
+
+		list_for_each_entry(client, &adap->dev.devres_head, detected) {
+			if (client->addr == I2C_PCA9532_ADDR) {
+				i2c_put_adapter(adap);
+
+				/* select input0 register */
+				data = 0;
+				err = i2c_master_send(client, (char*)&data, 1);
+
+				/* read value from register */
+				err = i2c_master_recv(client, (char*)&data, 1);
+
+				/* led4 input on PCA9532 is connected to card detect (active low) */
+				card_inserted = ((data&&0x10) == 0);
+
+				break;
+			}
+		}
+
+		set_current_state(TASK_INTERRUPTIBLE);
+		schedule_timeout(HZ);
+	}
+	return 0;
+}
+
+static struct task_struct *cd_thread;
+
+static void card_detect_start(void)
+{
+	cd_thread = kthread_run(card_detect_thread, NULL, "card-detect");
+	if (IS_ERR(cd_thread)) {
+		printk("\nFailed to start card detect thread\n");
+	}
+}
+
+static void card_detect_stop(void)
+{
+	kthread_stop(cd_thread);
+}
+#else /* CONFIG_LEDS_PCA9532 */
+
+#define card_detect_start()
+#define card_detect_stop()
+
+#endif
+
+/*
+ * Return 0 when card is removed, !0 when istalled
+ */
+unsigned int mmc_status(struct device *dev)
+{
+	//return card_inserted;
+	return 1;
+}
+
+/*
+ * Enable or disable SD slot power.
+ * Just starts/stops the threads
+ * TODO add power switching
+ */
+void mmc_power_enable(int enable)
+{
+	if (enable != 0) {
+		//card_detect_start();
+		//
+	} else {
+		//card_detect_stop();
+		//
+	}
+}
+
+/*
+ * Board specific MMC driver data
+ */
+struct mmci_platform_data lpc32xx_plat_data = {
+	.ocr_mask = MMC_VDD_30_31|MMC_VDD_31_32|MMC_VDD_32_33|MMC_VDD_33_34,
+	.status = mmc_status,
+};
+
+/*
+ * SD card controller resources
+ */
+struct amba_device mmc_device = {
+	.dev = {
+		.coherent_dma_mask = ~0,
+		.platform_data = &lpc32xx_plat_data,
+	},
+	.res = {
+		.start = LPC32XX_SD_BASE,
+		.end = (LPC32XX_SD_BASE + SZ_4K -1),
+		.flags = IORESOURCE_MEM,
+	},
+	.dma_mask = ~0,
+	.irq = {IRQ_LPC32XX_SD0, IRQ_LPC32XX_SD1},
+};
+#endif /* CONFIG_MMC_ARMMMCI */
+
+/*
  * I2C devices support
  */
 #if defined(CONFIG_LEDS_PCA9532)
@@ -842,6 +964,10 @@ void __init ea3250_board_init(void)
 {
 	u32 tmp;
 
+#if defined(CONFIG_MMC_ARMMMCI)
+	mmc_power_enable(1);
+#endif
+
 	/* Intiliase GPIO */
 	lpc32xx_gpio_init();
 
@@ -896,6 +1022,7 @@ void __init ea3250_board_init(void)
 	__raw_writel((tmp | LPC32XX_CLKPWR_LCDCTRL_CLK_EN),
 			LPC32XX_CLKPWR_LCDCLK_CTRL);
 
+#if defined (CONFIG_MMC_ARMMMCI)
 	/* Enable SD card clock so AMBA driver will work correctly. The
 	   AMBA driver needs the clock before the SD card controller
 	   driver initializes it. The clock will turn off once the driver
@@ -904,6 +1031,9 @@ void __init ea3250_board_init(void)
 	tmp |= LPC32XX_CLKPWR_MSCARD_SDCARD_EN |
 		LPC32XX_CLKPWR_MSCARD_MSDIO_PU_EN;
 	__raw_writel(tmp, LPC32XX_CLKPWR_MS_CTRL);
+
+	amba_device_register(&mmc_device, &iomem_resource);
+#endif
 
 	/* Disable UART5->USB transparent mode or USB won't work */
 	tmp = __raw_readl(LPC32XX_UARTCTL_CTRL);
