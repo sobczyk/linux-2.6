@@ -753,6 +753,7 @@ static int card_detect_thread(void __iomem* d)
 	int err = 0;
 	struct i2c_adapter *adap;
 	struct i2c_client *client;
+	struct device *pcadev;
 	u8 data = 0;
 
 	while (!kthread_should_stop()) {
@@ -765,22 +766,36 @@ static int card_detect_thread(void __iomem* d)
 			continue;
 		}
 
-		list_for_each_entry(client, &adap->dev.devres_head, detected) {
-			if (client->addr == I2C_PCA9532_ADDR) {
-				i2c_put_adapter(adap);
+// 		list_for_each_entry(client, &adap->dev.devres_head, detected) {
+// 			if (client->addr == I2C_PCA9532_ADDR) {
+// 				i2c_put_adapter(adap);
+// 
+// 				/* select input0 register */
+// 				data = 0;
+// 				err = i2c_master_send(client, (char*)&data, 1);
+// 
+// 				/* read value from register */
+// 				err = i2c_master_recv(client, (char*)&data, 1);
+// 
+// 				/* led4 input on PCA9532 is connected to card detect (active low) */
+// 				card_inserted = ((data&&0x10) == 0);
+// 
+// 				break;
+// 			}
+// 		}
+		pcadev = bus_find_device_by_name(adap->dev.bus, &adap->dev, "pca9532");
+		client = i2c_verify_client(pcadev);
+		if (client->addr == I2C_PCA9532_ADDR) {
+			i2c_put_adapter(adap);
 
-				/* select input0 register */
-				data = 0;
-				err = i2c_master_send(client, (char*)&data, 1);
-
-				/* read value from register */
-				err = i2c_master_recv(client, (char*)&data, 1);
-
-				/* led4 input on PCA9532 is connected to card detect (active low) */
-				card_inserted = ((data&&0x10) == 0);
-
-				break;
-			}
+			/* select input0 register */
+			data = 0;
+			err = i2c_master_send(client, (char*)&data, 1);
+			/* read value from register */
+			err = i2c_master_recv(client, (char*)&data, 1);
+			/* led4 input on PCA9532 is connected to card detect (active low) */
+			card_inserted = ((data&&0x10) == 0);
+			break;
 		}
 
 		set_current_state(TASK_INTERRUPTIBLE);
@@ -827,10 +842,10 @@ unsigned int mmc_status(struct device *dev)
 void mmc_power_enable(int enable)
 {
 	if (enable != 0) {
-		//card_detect_start();
+		card_detect_start();
 		//
 	} else {
-		//card_detect_stop();
+		card_detect_stop();
 		//
 	}
 }
