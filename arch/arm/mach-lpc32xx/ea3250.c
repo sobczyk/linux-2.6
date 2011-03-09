@@ -784,18 +784,20 @@ static int card_detect_thread(void __iomem* d)
 // 			}
 // 		}
 		pcadev = bus_find_device_by_name(adap->dev.bus, &adap->dev, "pca9532");
-		client = i2c_verify_client(pcadev);
-		if (client->addr == I2C_PCA9532_ADDR) {
-			i2c_put_adapter(adap);
+		if(pcadev){
+			client = i2c_verify_client(pcadev);
+			if (client->addr == I2C_PCA9532_ADDR) {
+				i2c_put_adapter(adap);
 
-			/* select input0 register */
-			data = 0;
-			err = i2c_master_send(client, (char*)&data, 1);
-			/* read value from register */
-			err = i2c_master_recv(client, (char*)&data, 1);
-			/* led4 input on PCA9532 is connected to card detect (active low) */
-			card_inserted = ((data&&0x10) == 0);
-			break;
+				/* select input0 register */
+				data = 0;
+				err = i2c_master_send(client, (char*)&data, 1);
+				/* read value from register */
+				err = i2c_master_recv(client, (char*)&data, 1);
+				/* led4 input on PCA9532 is connected to card detect (active low) */
+				card_inserted = ((data&&0x10) == 0);
+				break;
+			}
 		}
 
 		set_current_state(TASK_INTERRUPTIBLE);
@@ -830,8 +832,7 @@ static void card_detect_stop(void)
  */
 unsigned int mmc_status(struct device *dev)
 {
-	//return card_inserted;
-	return 1;
+	return card_inserted;
 }
 
 /*
@@ -856,6 +857,7 @@ void mmc_power_enable(int enable)
 struct mmci_platform_data lpc32xx_plat_data = {
 	.ocr_mask = MMC_VDD_30_31|MMC_VDD_31_32|MMC_VDD_32_33|MMC_VDD_33_34,
 	.status = mmc_status,
+	.capabilities   = MMC_CAP_4_BIT_DATA,
 };
 
 /*
@@ -864,6 +866,7 @@ struct mmci_platform_data lpc32xx_plat_data = {
 struct amba_device mmc_device = {
 	.dev = {
 		.coherent_dma_mask = ~0,
+		.init_name = "dev:mmc0",
 		.platform_data = &lpc32xx_plat_data,
 	},
 	.res = {
